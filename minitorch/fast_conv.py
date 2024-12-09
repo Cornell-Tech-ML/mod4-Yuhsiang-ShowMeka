@@ -286,47 +286,46 @@ def _tensor_conv2d(
 
     # TODO: Implement for Task 4.2.
     for b in prange(batch_):
-
         for co in prange(out_channels):
-            
             for ho in prange(height):
-
                 for wo in prange(width):
-
+                    # calculate the output position
                     o = (
                         b * out_strides[0] +
                         co * out_strides[1] +
                         ho * out_strides[2] +
                         wo * out_strides[3]
                     )
+                    acc = 0.0  # initialize the accumulator
 
                     for ci in prange(in_channels):
-
-                        w_h, w_w = 0, 0
+                        # calculate the base index of input and weight
+                        in_base = b * s10 + ci * s11
+                        weight_base = co * s20 + ci * s21
+                        w_h = 0  # reset the weight height index
 
                         if not reverse:
                             for hi in prange(min(ho, height - 1), min(ho + kh, height)):
+                                w_w = 0  # reset the weight width index
                                 for wi in prange(min(wo, width - 1), min(wo + kw, width)):
-                                    out[o] += (
-                                        input[b * s10 + ci * s11 + hi * s12 + wi * s13]
-                                        * weight[co * s20 + ci * s21 + w_h * s22 + w_w * s23]
+                                    acc += (
+                                        input[in_base + hi * s12 + wi * s13] *
+                                        weight[weight_base + w_h * s22 + w_w * s23]
                                     )
                                     w_w += 1
-                                w_w = 0
                                 w_h += 1
-
                         else:
                             for hi in prange(max(ho - kh + 1, 0), min(ho + 1, height)):
+                                w_w = 0  # reset the weight width index
                                 for wi in prange(max(wo - kw + 1, 0), min(wo + 1, width)):
-                                    out[o] += (
-                                        # input[batch, in_channels, height, width]
-                                        input[b * s10 + ci * s11 + hi * s12 + wi * s13]
-                                        # weight[out_channels, in_channels, kernel_height, k_width]
-                                        * weight[co * s20 + ci * s21 + w_h * s22 + w_w * s23]
+                                    acc += (
+                                        input[in_base + hi * s12 + wi * s13] *
+                                        weight[weight_base + w_h * s22 + w_w * s23]
                                     )
                                     w_w += 1
-                                w_w = 0
                                 w_h += 1
+
+                    out[o] = acc  # write the final result
 
 tensor_conv2d = njit(_tensor_conv2d, parallel=True, fastmath=True)
 
