@@ -39,17 +39,17 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     
     new_h, new_w = height // kh, width // kw
 
-    inputTensor = input.view(batch, channel, new_h, kh, new_w, kw)
+    outputTensor = input.view(batch, channel, new_h, kh, new_w, kw)
     # reshape to batch x channel x h x kh x w x kw
-    inputTensor = inputTensor.view(batch, channel, new_h, kh, new_w, kw)
+    outputTensor = outputTensor.view(batch, channel, new_h, kh, new_w, kw)
     # reshape to batch x channel x h x kh x width
-    inputTensor = inputTensor.permute(0, 1, 2, 4, 3)
+    outputTensor = outputTensor.permute(0, 1, 2, 4, 3)
     # permute to batch x channel x h x w x kh
-    inputTensor = inputTensor.contiguous()
+    outputTensor = outputTensor.contiguous()
     # make contiguous
-    inputTensor = inputTensor.view(batch, channel, new_h, new_w, kh * kw)
+    outputTensor = outputTensor.view(batch, channel, new_h, new_w, kh * kw)
     # reshape to batch x channel x h x w x kh * kw
-    return inputTensor, new_h, new_w
+    return outputTensor, new_h, new_w
 
 
 # TODO: Implement for Task 4.3.
