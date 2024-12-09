@@ -91,7 +91,83 @@ def _tensor_conv1d(
     s2 = weight_strides
 
     # TODO: Implement for Task 4.1.
-    raise NotImplementedError("Need to implement for Task 4.1")
+
+    # Idea: batch represents the number of images in tne batch
+    # out_channel represents the number of filters / potential features identifier
+    # out_width represent the number of pixels in the output image (because we can do pooling on the input image)
+    # in_channels represent for the same position of the image we can have different channels (such as RGB)
+    # width represent the number of pixels in a image
+    # weight_width represent the size of the filter
+
+    # pseudo code:
+    # for each batch:
+    #   for each out_channel:
+    #       for each out_width:
+    #           for each in_channels:
+    #               for each weight_width:
+    #                   if not reverse:
+    #                       anchor weight at left
+    #                       for each width:
+    #                           out[b, co, i] += input[b, ci, j] * weight[co, ci, wi]
+    #                           wi += 1
+    #                   else:
+    #                       anchor weight at right
+    #                       for each width:
+    #                           out[b, co, i] += input[b, ci, j] * weight[co, ci, kw - 1 - (i - j)]
+    #                           wi += 1
+
+    # Step 1: for each batch
+    for b in prange(batch_):
+        # Step 2: Iterate over output channels
+        for co in prange(out_channels):
+            # Step 3: Iterate over output width
+            for i in prange(out_width):
+                # Step 4: Iterate over input channels
+                for ci in prange(in_channels):
+                    # weight index
+                    wi = 0
+                    # if not reverse, anchor weight at left
+                    if not reverse:
+                        for j in prange(min(i, width - 1), min(i + kw, width)):
+                           
+                           out[
+                            b * out_strides[0] +
+                            co * out_strides[1] +
+                            i * out_strides[2]
+                           ] += (
+                            input[
+                                b * s1[0] +
+                                ci * s1[1] +
+                                j * s1[2]
+                            ] * weight[
+                                co * s2[0] +
+                                ci * s2[1] +
+                                wi * s2[2]
+                            ]
+                           )
+                           wi += 1
+
+                    # if reverse, anchor weight at right
+                    else:
+                        for j in prange(max(i - kw + 1, 0), max(i + 1, width)):
+                            out[
+                                b * out_strides[0] +
+                                co * out_strides[1] +
+                                i * out_strides[2]
+                            ] += (
+                                input[
+                                    b * s1[0] +
+                                    ci * s1[1] +
+                                    j * s1[2]
+                                ] * weight[
+                                    co * s2[0] +
+                                    ci * s2[1] +
+                                    (kw - 1 - (i - j)) * s2[2]
+                                ]
+                            )
+                            wi += 1
+
+    # Task 4.1 finished
 
 
 tensor_conv1d = njit(_tensor_conv1d, parallel=True)
@@ -220,8 +296,48 @@ def _tensor_conv2d(
     s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
 
     # TODO: Implement for Task 4.2.
-    raise NotImplementedError("Need to implement for Task 4.2")
+    for b in prange(batch_):
 
+        for co in prange(out_channels):
+            
+            for ho in prange(height):
+
+                for wo in prange(width):
+
+                    o = (
+                        b * out_strides[0] +
+                        co * out_strides[1] +
+                        ho * out_strides[2] +
+                        wo * out_strides[3]
+                    )
+
+                    for ci in prange(in_channels):
+
+                        w_h, w_w = 0, 0
+
+                        if not reverse:
+                            for hi in prange(min(ho, height - 1), min(ho + kh, height)):
+                                for wi in prange(min(wo, width - 1), min(wo + kw, width)):
+                                    out[o] += (
+                                        input[b * s10 + ci * s11 + hi * s12 + wi * s13]
+                                        * weight[co * s20 + ci * s21 + w_h * s22 + w_w * s23]
+                                    )
+                                    w_w += 1
+                                w_w = 0
+                                w_h += 1
+
+                        else:
+                            for hi in prange(max(ho - kh + 1, 0), min(ho + 1, height)):
+                                for wi in prange(max(wo - kw + 1, 0), min(wo + 1, width)):
+                                    out[o] += (
+                                        # input[batch, in_channels, height, width]
+                                        input[b * s10 + ci * s11 + hi * s12 + wi * s13]
+                                        # weight[out_channels, in_channels, kernel_height, k_width]
+                                        * weight[co * s20 + ci * s21 + w_h * s22 + w_w * s23]
+                                    )
+                                    w_w += 1
+                                w_w = 0
+                                w_h += 1
 
 tensor_conv2d = njit(_tensor_conv2d, parallel=True, fastmath=True)
 

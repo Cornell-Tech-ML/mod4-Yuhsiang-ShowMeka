@@ -36,7 +36,16 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     assert height % kh == 0
     assert width % kw == 0
     # TODO: Implement for Task 4.3.
-    raise NotImplementedError("Need to implement for Task 4.3")
+    
+    h, w = height // kh, width // kw
+
+    out = input.view(batch, channel, h, kh, w, kw)
+    out = out.view(batch, channel, h, kh, width)
+    out = out.permute(0, 1, 2, 4, 3)
+    out = out.contiguous()
+    out = out.view(batch, channel, h, w, kh * kw)
+
+    return out, h, w
 
 
 # TODO: Implement for Task 4.3.
