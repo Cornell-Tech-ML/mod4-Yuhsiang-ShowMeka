@@ -54,38 +54,3 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
 
 # TODO: Implement for Task 4.3.
 
-def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
-    """Compute 2D average pooling on input tensor.
-
-    Args:
-    ----
-        input: batch x channel x height x width
-        kernel: height x width of pooling
-
-    Returns:
-    -------
-        Tensor of size batch x channel x new_height x new_width
-    """
-    tiled_tensor, h, w = tile(input, kernel)
-    
-    return  tiled_tensor.mean(dim = -1).view(input.shape[0], input.shape[1], h, w)
-
-
-# 4.4
-
-
-class Max(Function):
-    @staticmethod
-    def forward(ctx: Context, inputTensor: Tensor, dim: int) -> Tensor:
-        """ """
-        ctx.save_for_backward(inputTensor, dim)
-        return inputTensor.f.max_reduce(inputTensor, int(dim.item()))
-    
-    @staticmethod
-    def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, None]:
-        inputTensor, dim = ctx.saved_values
-        return grad_output * argmax(inputTensor, dim), 0.0
-    
-
-def argmax(inputTensor: Tensor, dim: int) -> Tensor:
-    return max_reduce(inputTensor, dim) == inputTensor  
