@@ -37,20 +37,19 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     assert width % kw == 0
     # TODO: Implement for Task 4.3.
     
-    h, w = height // kh, width // kw
+    new_h, new_w = height // kh, width // kw
 
-    out = input.view(batch, channel, h, kh, w, kw)
+    inputTensor = input.view(batch, channel, new_h, kh, new_w, kw)
     # reshape to batch x channel x h x kh x w x kw
-    out = out.view(batch, channel, h, kh, width)
+    inputTensor = inputTensor.view(batch, channel, new_h, kh, new_w, kw)
     # reshape to batch x channel x h x kh x width
-    out = out.permute(0, 1, 2, 4, 3)
+    inputTensor = inputTensor.permute(0, 1, 2, 4, 3)
     # permute to batch x channel x h x w x kh
-    out = out.contiguous()
+    inputTensor = inputTensor.contiguous()
     # make contiguous
-    out = out.view(batch, channel, h, w, kh * kw)
+    inputTensor = inputTensor.view(batch, channel, new_h, new_w, kh * kw)
     # reshape to batch x channel x h x w x kh * kw
-
-    return out, h, w
+    return inputTensor, new_h, new_w
 
 
 # TODO: Implement for Task 4.3.
@@ -69,4 +68,24 @@ def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
     """
     tiled_tensor, h, w = tile(input, kernel)
     
-    return  tiled_tensor.mean(dim = 4).view(input.shape[0], input.shape[1], h, w)
+    return  tiled_tensor.mean(dim = -1).view(input.shape[0], input.shape[1], h, w)
+
+
+# 4.4
+
+
+class Max(Function):
+    @staticmethod
+    def forward(ctx: Context, inputTensor: Tensor, dim: int) -> Tensor:
+        """ """
+        ctx.save_for_backward(inputTensor, dim)
+        return inputTensor.f.max_reduce(inputTensor, int(dim.item()))
+    
+    @staticmethod
+    def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, None]:
+        inputTensor, dim = ctx.saved_values
+        return grad_output * argmax(inputTensor, dim), 0.0
+    
+
+def argmax(inputTensor: Tensor, dim: int) -> Tensor:
+    return max_reduce(inputTensor, dim) == inputTensor  

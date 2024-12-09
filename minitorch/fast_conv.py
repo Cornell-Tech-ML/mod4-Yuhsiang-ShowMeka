@@ -123,49 +123,38 @@ def _tensor_conv1d(
             # Step 3: Iterate over output width
             for i in prange(out_width):
                 # Step 4: Iterate over input channels
+
+                out_pos = (
+                    b * out_strides[0] +
+                    co * out_strides[1] +
+                    i * out_strides[2]
+                )
+
+                acc = 0.0
+
                 for ci in prange(in_channels):
-                    # weight index
+                    # count the base index of input and weight and initialize the weight index
+                    in_base = b * s1[0] + ci * s1[1]
+                    weight_base = co * s2[0] + ci * s2[1]
                     wi = 0
-                    # if not reverse, anchor weight at left
+                    
                     if not reverse:
                         for j in prange(min(i, width - 1), min(i + kw, width)):
-                           
-                           out[
-                            b * out_strides[0] +
-                            co * out_strides[1] +
-                            i * out_strides[2]
-                           ] += (
-                            input[
-                                b * s1[0] +
-                                ci * s1[1] +
-                                j * s1[2]
-                            ] * weight[
-                                co * s2[0] +
-                                ci * s2[1] +
-                                wi * s2[2]
-                            ]
-                           )
-                           wi += 1
-
-                    # if reverse, anchor weight at right
-                    else:
-                        for j in prange(max(i - kw + 1, 0), max(i + 1, width)):
-                            out[
-                                b * out_strides[0] +
-                                co * out_strides[1] +
-                                i * out_strides[2]
-                            ] += (
-                                input[
-                                    b * s1[0] +
-                                    ci * s1[1] +
-                                    j * s1[2]
-                                ] * weight[
-                                    co * s2[0] +
-                                    ci * s2[1] +
-                                    (kw - 1 - (i - j)) * s2[2]
-                                ]
+                            acc += (
+                                input[in_base + j * s1[2]] * 
+                                weight[weight_base + wi * s2[2]]
                             )
                             wi += 1
+                    else:
+                        for j in prange(max(i - kw + 1, 0), max(i + 1, width)):
+                            acc += (
+                                input[in_base + j * s1[2]] * 
+                                weight[weight_base + (kw - 1 - (i - j)) * s2[2]]
+                            )
+                            wi += 1
+                    
+                # write the accumulated value to the output
+                out[out_pos] = acc
 
     # Task 4.1 finished
 
