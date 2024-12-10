@@ -287,8 +287,7 @@ def _tensor_conv2d(
         for co in prange(out_channels):
             for ho in prange(height):
                 for wo in prange(width):
-                    # calculate the output position
-                    o = (
+                    out_pos = (
                         b * out_strides[0]
                         + co * out_strides[1]
                         + ho * out_strides[2]
@@ -297,37 +296,49 @@ def _tensor_conv2d(
                     acc = 0.0  # initialize the accumulator
 
                     for ci in prange(in_channels):
-                        # calculate the base index of input and weight
                         in_base = b * s10 + ci * s11
                         weight_base = co * s20 + ci * s21
-                        w_h = 0  # reset the weight height index
 
                         if not reverse:
-                            for hi in prange(min(ho, height - 1), min(ho + kh, height)):
-                                w_w = 0  # reset the weight width index
-                                for wi in prange(
-                                    min(wo, width - 1), min(wo + kw, width)
-                                ):
-                                    acc += (
-                                        input[in_base + hi * s12 + wi * s13]
-                                        * weight[weight_base + w_h * s22 + w_w * s23]
-                                    )
-                                    w_w += 1
-                                w_h += 1
+                            for hi in prange(max(0, ho), min(ho + kh, height)):
+                                w_h = (
+                                    hi - ho
+                                )  # compute the relative weight height index
+                                for wi in prange(max(0, wo), min(wo + kw, width)):
+                                    w_w = (
+                                        wi - wo
+                                    )  # compute the relative weight width index
+                                    if (
+                                        0 <= w_h < kh and 0 <= w_w < kw
+                                    ):  # ensure the weight index is valid
+                                        acc += (
+                                            input[in_base + hi * s12 + wi * s13]
+                                            * weight[
+                                                weight_base + w_h * s22 + w_w * s23
+                                            ]
+                                        )
                         else:
                             for hi in prange(max(ho - kh + 1, 0), min(ho + 1, height)):
-                                w_w = 0  # reset the weight width index
+                                w_h = (
+                                    kh - 1 - (ho - hi)
+                                )  # compute the relative weight height index
                                 for wi in prange(
                                     max(wo - kw + 1, 0), min(wo + 1, width)
                                 ):
-                                    acc += (
-                                        input[in_base + hi * s12 + wi * s13]
-                                        * weight[weight_base + w_h * s22 + w_w * s23]
-                                    )
-                                    w_w += 1
-                                w_h += 1
+                                    w_w = (
+                                        kw - 1 - (wo - wi)
+                                    )  # compute the relative weight width index
+                                    if (
+                                        0 <= w_h < kh and 0 <= w_w < kw
+                                    ):  # ensure the weight index is valid
+                                        acc += (
+                                            input[in_base + hi * s12 + wi * s13]
+                                            * weight[
+                                                weight_base + w_h * s22 + w_w * s23
+                                            ]
+                                        )
 
-                    out[o] = acc  # write the final result
+                    out[out_pos] = acc
 
 
 tensor_conv2d = njit(_tensor_conv2d, parallel=True, fastmath=True)
