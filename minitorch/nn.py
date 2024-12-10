@@ -52,5 +52,21 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     return outputTensor, new_h, new_w
 
 
+def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
+    """Tiled average pooling 2D
+
+    Args:
+    ----
+        input: batch x channel x height x width
+        kernel: height x width of pooling
+
+    Returns:
+    -------
+        Tensor of size batch x channel x new_height x new_width
+    """
+    input, new_h, new_w = tile(input, kernel)
+    return input.mean(dim=-1).contiguous().view(input.shape[0], input.shape[1], new_h, new_w)
+
+
 # TODO: Implement for Task 4.3.
 
