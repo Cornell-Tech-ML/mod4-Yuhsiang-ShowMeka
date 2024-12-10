@@ -134,6 +134,7 @@ def _tensor_conv1d(
 
                     if not reverse:
                         for j in prange(min(i, width - 1), min(i + kw, width)):
+                            wi = j - i
                             acc += (
                                 input[in_base + j * s1[2]]
                                 * weight[weight_base + wi * s2[2]]
@@ -141,13 +142,15 @@ def _tensor_conv1d(
                             wi += 1
                     else:
                         for j in prange(max(i - kw + 1, 0), max(i + 1, width)):
-                            acc += (
-                                input[in_base + j * s1[2]]
-                                * weight[weight_base + wi * s2[2]]
-                            )
+                            wi = kw - 1 - (i - j)
+                            if 0 <= wi < kw:
+                                acc += (
+                                    input[in_base + j * s1[2]]
+                                    * weight[weight_base + wi * s2[2]]
+                                )
                             wi += 1
 
-                # write the accumulated value to the output
+                    # write the accumulated value to the output
                 out[out_pos] = acc
 
     # Task 4.1 finished
