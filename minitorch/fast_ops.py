@@ -6,7 +6,7 @@ import numpy as np
 from numba import njit, prange
 
 from .tensor_data import (
-    MAX_DIMS
+    MAX_DIMS,
     broadcast_index,
     index_to_position,
     shape_broadcast,
@@ -15,7 +15,7 @@ from .tensor_data import (
 from .tensor_ops import MapProto, TensorOps
 
 if TYPE_CHECKING:
-    from typing import Any, Callable, Optional
+    from typing import Callable, Optional
 
     from .tensor import Tensor
     from .tensor_data import Index, Shape, Storage, Strides
@@ -174,7 +174,7 @@ def tensor_map(
                 in_index: Index = np.empty(MAX_DIMS, np.int32)
 
                 to_index(i, out_shape, out_index)
-                broadcast_index(out_index, out_sh ape, in_shape, in_index)
+                broadcast_index(out_index, out_shape, in_shape, in_index)
 
                 o = index_to_position(out_index, out_strides)
                 j = index_to_position(in_index, in_strides)
@@ -225,7 +225,7 @@ def tensor_zip(
         # TODO: Implement for Task 3.1.
 
         if (
-            len(out_strides) != len(a_strides)  
+            len(out_strides) != len(a_strides)
             or len(out_strides) != len(b_strides)
             or (out_strides != a_strides).any()
             or (out_strides != b_strides).any()
@@ -359,18 +359,22 @@ def _tensor_matrix_multiply(
             for i3 in prange(out_shape[2]):
                 acc = 0.0
 
-                a_inner = i1 * a_strides[0] + i2 * a_strides[1]
-                b_inner = i1 * b_strides[0] + i3 * b_strides[1]
+                a_inner = i1 * a_batch_stride + i2 * a_strides[1]
+                b_inner = i1 * b_batch_stride + i3 * b_strides[2]
 
                 for _ in range(a_shape[2]):
                     acc += a_storage[a_inner] * b_storage[b_inner]
                     a_inner += a_strides[2]
-                    b_inner += b_strides[2]
+                    b_inner += b_strides[1]
 
-                out_position = i1 * out_strides[0] + i2 * out_strides[1] + i3 * out_strides[2]
+                out_position = (
+                    i1 * out_strides[0] + i2 * out_strides[1] + i3 * out_strides[2]
+                )
 
                 out[out_position] = acc
 
     # END ASSIGN 3.2
 
-tensor_matrix_multiply = njit(parallel = True, fastmath = True)(_tensor_matrix_multiply)
+
+tensor_matrix_multiply = njit(parallel=True, fastmath=True)(_tensor_matrix_multiply)
+assert tensor_matrix_multiply is not None

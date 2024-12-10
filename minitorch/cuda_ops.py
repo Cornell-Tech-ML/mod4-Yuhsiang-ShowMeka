@@ -1,7 +1,7 @@
 # type: ignore
 # Currently pyright doesn't support numba.cuda
 
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 import numba
 from numba import cuda
@@ -25,9 +25,9 @@ from .tensor_ops import MapProto, TensorOps
 # in these functions.
 
 
-to_index = cuda.jit(device = True)(to_index)
-index_to_position = cuda.jit(device = True)(index_to_position)
-broadcast_index = cuda.jit(device = True)(broadcast_index)
+to_index = cuda.jit(device=True)(to_index)
+index_to_position = cuda.jit(device=True)(index_to_position)
+broadcast_index = cuda.jit(device=True)(broadcast_index)
 
 THREADS_PER_BLOCK = 32
 
@@ -55,7 +55,7 @@ class CudaOps(TensorOps):
     @staticmethod
     def zip(fn: Callable[[float, float], float]) -> Callable[[Tensor, Tensor], Tensor]:
         """See `tensor_ops.py`"""
-        f = tensor_zip(cuda.jit(device = True)(fn))
+        f = tensor_zip(cuda.jit(device=True)(fn))
 
         def ret(a: Tensor, b: Tensor) -> Tensor:
             c_shape = shape_broadcast(a.shape, b.shape)
@@ -74,7 +74,7 @@ class CudaOps(TensorOps):
         fn: Callable[[float, float], float], start: float = 0.0
     ) -> Callable[[Tensor, int], Tensor]:
         """See `tensor_ops.py`"""
-        f = tensor_reduce(cuda.jit(device = True)(fn))
+        f = tensor_reduce(cuda.jit(device=True)(fn))
 
         def ret(a: Tensor, dim: int) -> Tensor:
             out_shape = list(a.shape)
@@ -336,7 +336,6 @@ def tensor_reduce(
         if out_pos < out_size:
             to_index(out_pos, out_shape, out_index)
             out_pos = index_to_position(out_index, out_strides)
-            
 
             if out_index[reduce_dim] < a_shape[reduce_dim]:
                 in_a = index_to_position(out_index, a_strides)
@@ -345,8 +344,8 @@ def tensor_reduce(
 
                 x = 0
 
-                while 2 ** x < BLOCK_DIM:
-                    j = 2 ** x
+                while 2**x < BLOCK_DIM:
+                    j = 2**x
                     if pos % (2 * j) == 0:
                         cache[pos] = fn(cache[pos], cache[pos + j])
                     cuda.syncthreads()
@@ -499,6 +498,8 @@ def _tensor_matrix_multiply(
     #    c) Compute the dot produce for position c[i, j]
     # TODO: Implement for Task 3.4.
 
+    accum = 0
+
     for k_start in range(0, a_shape[2], BLOCK_DIM):
         k = k_start + pj
 
@@ -522,5 +523,6 @@ def _tensor_matrix_multiply(
 
     if i < out_shape[1] and j < out_shape[2]:
         out[out_strides[0] * batch + i * out_strides[1] + j * out_strides[2]] = accum
+
 
 tensor_matrix_multiply = cuda.jit()(_tensor_matrix_multiply)

@@ -96,10 +96,13 @@ def broadcast_index(
 
     """
     # TODO: Implement for Task 2.2.
-    for i in range(len(shape)):
-        out_index[i] = big_index[i]
-        if big_index[i] >= shape[i]:
+    for i, s in enumerate(shape):
+        if s > 1:
+            out_index[i] = big_index[i + (len(big_shape) - len(shape))]
+        else:
             out_index[i] = 0
+
+    return None
 
 
 def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:

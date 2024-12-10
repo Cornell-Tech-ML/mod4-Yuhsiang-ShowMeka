@@ -344,7 +344,7 @@ class Tensor:
         if dim is not None:
             return All.apply(self, self._ensure_tensor(dim))
         else:
-            return All.apply(self, self._ensure_tensor(dim))
+            return All.apply(self, self._ensure_tensor(0))
 
     def is_close(self, y: Tensor) -> Tensor:
         """Compare two tensors"""

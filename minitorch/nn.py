@@ -1,10 +1,8 @@
 from typing import Tuple
 
-from . import operators
 from .autodiff import Context
-from .fast_ops import FastOps
 from .tensor import Tensor
-from .tensor_functions import Function, rand, tensor
+from .tensor_functions import Function, rand
 
 
 # List of functions in this file:
@@ -36,7 +34,7 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     assert height % kh == 0
     assert width % kw == 0
     # TODO: Implement for Task 4.3.
-    
+
     new_h, new_w = height // kh, width // kw
 
     outputTensor = input.view(batch, channel, new_h, kh, new_w, kw)
@@ -63,12 +61,18 @@ def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
     Returns:
     -------
         Tensor of size batch x channel x new_height x new_width
+
     """
     input, new_h, new_w = tile(input, kernel)
-    return input.mean(dim=-1).contiguous().view(input.shape[0], input.shape[1], new_h, new_w)
+    return (
+        input.mean(dim=-1)
+        .contiguous()
+        .view(input.shape[0], input.shape[1], new_h, new_w)
+    )
 
 
 # TODO: Implement for Task 4.3.
+
 
 class Max(Function):
     @staticmethod
@@ -88,22 +92,30 @@ def argmax(inputTensor: Tensor, dim: int) -> Tensor:
     """Use argmax to implement one hot encoding"""
     return inputTensor == max(inputTensor, dim)
 
+
 def max(inputTensor: Tensor, dim: int) -> Tensor:
     """Use max to implement argmax"""
     return Max.apply(inputTensor, inputTensor._ensure_tensor(dim))
+
 
 def softmax(inputTensor: Tensor, dim: int) -> Tensor:
     """Use softmax to implement softmax"""
     return inputTensor.exp() / inputTensor.sum(dim)
 
+
 def logsoftmax(inputTensor: Tensor, dim: int) -> Tensor:
     """Use logsoftmax to implement softmax"""
     return softmax(inputTensor, dim).log()
 
+
 def maxpool2d(inputTensor: Tensor, kernel: Tuple[int, int]) -> Tensor:
     """Tile the input tensor and apply max pooling"""
     tiledTensor, new_h, new_w = tile(inputTensor, kernel)
-    return max(tiledTensor, dim=-1).contiguous().view(tiledTensor.shape[0], tiledTensor.shape[1], new_h, new_w)
+    return (
+        max(tiledTensor, dim=-1)
+        .contiguous()
+        .view(tiledTensor.shape[0], tiledTensor.shape[1], new_h, new_w)
+    )
 
 
 def dropout(inputTensor: Tensor, rate: float, ignore: bool = False) -> Tensor:
@@ -111,10 +123,6 @@ def dropout(inputTensor: Tensor, rate: float, ignore: bool = False) -> Tensor:
     if ignore:
         return inputTensor
     else:
-        rand_values = rand(inputTensor.shape, backend = inputTensor.backend)
+        rand_values = rand(inputTensor.shape, backend=inputTensor.backend)
         mask = rand_values > rate
         return inputTensor * mask / (1 - rate)
-
-
-    
-
