@@ -266,7 +266,7 @@ def _tensor_conv2d(
         reverse (bool): anchor weight at top-left or bottom-right
 
     """
-    batch_, out_channels, _, _ = out_shape
+    batch_, out_channels, out_height, out_width = out_shape
     batch, in_channels, height, width = input_shape
     out_channels_, in_channels_, kh, kw = weight_shape
 
@@ -283,62 +283,52 @@ def _tensor_conv2d(
     s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
 
     # TODO: Implement for Task 4.2.
-    for b in prange(batch_):
+    for b in prange(batch):
         for co in prange(out_channels):
-            for ho in prange(height):
-                for wo in prange(width):
-                    out_pos = (
+            for ho in prange(out_height):
+                for wo in prange(out_width):
+                    o = (
                         b * out_strides[0]
                         + co * out_strides[1]
                         + ho * out_strides[2]
                         + wo * out_strides[3]
                     )
-                    acc = 0.0  # initialize the accumulator
-
                     for ci in prange(in_channels):
-                        in_base = b * s10 + ci * s11
-                        weight_base = co * s20 + ci * s21
-
+                        hw, ww = 0, 0
                         if not reverse:
-                            for hi in prange(max(0, ho), min(ho + kh, height)):
-                                w_h = (
-                                    hi - ho
-                                )  # compute the relative weight height index
-                                for wi in prange(max(0, wo), min(wo + kw, width)):
-                                    w_w = (
-                                        wi - wo
-                                    )  # compute the relative weight width index
-                                    if (
-                                        0 <= w_h < kh and 0 <= w_w < kw
-                                    ):  # ensure the weight index is valid
-                                        acc += (
-                                            input[in_base + hi * s12 + wi * s13]
-                                            * weight[
-                                                weight_base + w_h * s22 + w_w * s23
-                                            ]
-                                        )
-                        else:
-                            for hi in prange(max(ho - kh + 1, 0), min(ho + 1, height)):
-                                w_h = (
-                                    kh - 1 - (ho - hi)
-                                )  # compute the relative weight height index
-                                for wi in prange(
-                                    max(wo - kw + 1, 0), min(wo + 1, width)
-                                ):
-                                    w_w = (
-                                        kw - 1 - (wo - wi)
-                                    )  # compute the relative weight width index
-                                    if (
-                                        0 <= w_h < kh and 0 <= w_w < kw
-                                    ):  # ensure the weight index is valid
-                                        acc += (
-                                            input[in_base + hi * s12 + wi * s13]
-                                            * weight[
-                                                weight_base + w_h * s22 + w_w * s23
-                                            ]
-                                        )
+                            h_start = min(ho, height - 1)
+                            h_end = min(ho + kh, height)
+                            w_start = min(wo, width - 1)
+                            w_end = min(wo + kw, width)
 
-                    out[out_pos] = acc
+                            for hi in prange(h_start, h_end):
+                                for wi in prange(w_start, w_end):
+                                    out[o] += (
+                                        input[b * s10 + ci * s11 + hi * s12 + wi * s13]
+                                        * weight[
+                                            co * s20 + ci * s21 + hw * s22 + ww * s23
+                                        ]
+                                    )
+                                    ww += 1
+                                ww = 0
+                                hw += 1
+                        else:
+                            h_start = max(ho - kh + 1, 0)
+                            h_end = min(ho + 1, height)
+                            w_start = max(wo - kw + 1, 0)
+                            w_end = min(wo + 1, width)
+
+                            for hi in prange(h_start, h_end):
+                                for wi in prange(w_start, w_end):
+                                    out[o] += (
+                                        input[b * s10 + ci * s11 + hi * s12 + wi * s13]
+                                        * weight[
+                                            co * s20 + ci * s21 + hw * s22 + ww * s23
+                                        ]
+                                    )
+                                    ww += 1
+                                ww = 0
+                                hw += 1
 
 
 tensor_conv2d = njit(_tensor_conv2d, parallel=True, fastmath=True)
