@@ -37,11 +37,11 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
 
     new_h, new_w = height // kh, width // kw
 
-    outputTensor = input.view(batch, channel, new_h, kh, new_w, kw)
+    outputTensor = input.contiguous()
     # reshape to batch x channel x h x kh x w x kw
     outputTensor = outputTensor.view(batch, channel, new_h, kh, new_w, kw)
     # reshape to batch x channel x h x kh x width
-    outputTensor = outputTensor.permute(0, 1, 2, 4, 3)
+    outputTensor = outputTensor.permute(0, 1, 2, 4, 3, 5)
     # permute to batch x channel x h x w x kh
     outputTensor = outputTensor.contiguous()
     # make contiguous
@@ -65,7 +65,7 @@ def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
     """
     input, new_h, new_w = tile(input, kernel)
     return (
-        input.mean(dim=-1)
+        input.mean(dim=4)
         .contiguous()
         .view(input.shape[0], input.shape[1], new_h, new_w)
     )
@@ -85,7 +85,7 @@ class Max(Function):
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
         """Backward pass for max operation"""
         input, dim = ctx.saved_tensors
-        return grad_output * (argmax(input, dim)), 0.0
+        return grad_output * argmax(input, dim), 0.0
 
 
 def argmax(inputTensor: Tensor, dim: int) -> Tensor:
@@ -100,7 +100,7 @@ def max(inputTensor: Tensor, dim: int) -> Tensor:
 
 def softmax(inputTensor: Tensor, dim: int) -> Tensor:
     """Use softmax to implement softmax"""
-    return inputTensor.exp() / inputTensor.sum(dim)
+    return inputTensor.exp() / inputTensor.exp().sum(dim)
 
 
 def logsoftmax(inputTensor: Tensor, dim: int) -> Tensor:
@@ -112,7 +112,7 @@ def maxpool2d(inputTensor: Tensor, kernel: Tuple[int, int]) -> Tensor:
     """Tile the input tensor and apply max pooling"""
     tiledTensor, new_h, new_w = tile(inputTensor, kernel)
     return (
-        max(tiledTensor, dim=-1)
+        max(tiledTensor, dim=4)
         .contiguous()
         .view(tiledTensor.shape[0], tiledTensor.shape[1], new_h, new_w)
     )
@@ -125,4 +125,4 @@ def dropout(inputTensor: Tensor, rate: float, ignore: bool = False) -> Tensor:
     else:
         rand_values = rand(inputTensor.shape, backend=inputTensor.backend)
         mask = rand_values > rate
-        return inputTensor * mask / (1 - rate)
+        return inputTensor * mask / (1 - rate) if rate != 1.0 else inputTensor * mask
