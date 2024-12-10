@@ -143,7 +143,7 @@ def _tensor_conv1d(
                         for j in prange(max(i - kw + 1, 0), max(i + 1, width)):
                             acc += (
                                 input[in_base + j * s1[2]]
-                                * weight[weight_base + (kw - 1 - (i - j)) * s2[2]]
+                                * weight[weight_base + wi * s2[2]]
                             )
                             wi += 1
 
