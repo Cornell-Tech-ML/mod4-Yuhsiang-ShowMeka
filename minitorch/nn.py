@@ -91,5 +91,30 @@ def argmax(inputTensor: Tensor, dim: int) -> Tensor:
 def max(inputTensor: Tensor, dim: int) -> Tensor:
     """Use max to implement argmax"""
     return Max.apply(inputTensor, inputTensor._ensure_tensor(dim))
+
+def softmax(inputTensor: Tensor, dim: int) -> Tensor:
+    """Use softmax to implement softmax"""
+    return inputTensor.exp() / inputTensor.sum(dim)
+
+def logsoftmax(inputTensor: Tensor, dim: int) -> Tensor:
+    """Use logsoftmax to implement softmax"""
+    return softmax(inputTensor, dim).log()
+
+def maxpool2d(inputTensor: Tensor, kernel: Tuple[int, int]) -> Tensor:
+    """Tile the input tensor and apply max pooling"""
+    tiledTensor, new_h, new_w = tile(inputTensor, kernel)
+    return max(tiledTensor, dim=-1).contiguous().view(tiledTensor.shape[0], tiledTensor.shape[1], new_h, new_w)
+
+
+def dropout(inputTensor: Tensor, rate: float, ignore: bool = False) -> Tensor:
+    """Dropout positions based on random noise, include an argument to turn off"""
+    if ignore:
+        return inputTensor
+    else:
+        rand_values = rand(inputTensor.shape, backend = inputTensor.backend)
+        mask = rand_values > rate
+        return inputTensor * mask / (1 - rate)
+
+
     
 
