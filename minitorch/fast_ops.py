@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar, Any
 
 import numpy as np
-from numba import njit, prange
+from numba import njit as _njit
+from numba import prange
+
 
 from .tensor_data import (
     MAX_DIMS,
@@ -26,10 +28,17 @@ if TYPE_CHECKING:
 # If you get an error, read the docs for NUMBA as to what is allowed
 # in these functions.
 
+Fn = TypeVar("Fn")
 
-to_index = njit(inline="always")(to_index)
-index_to_position = njit(inline="always")(index_to_position)
-broadcast_index = njit(inline="always")(broadcast_index)
+
+def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """Decorator to JIT compile a function."""
+    return _njit(inline="always", **kwargs)(fn)  # type: ignore
+
+
+to_index = njit(to_index)
+index_to_position = njit(index_to_position)
+broadcast_index = njit(broadcast_index)
 
 
 class FastOps(TensorOps):
@@ -50,7 +59,7 @@ class FastOps(TensorOps):
     @staticmethod
     def zip(fn: Callable[[float, float], float]) -> Callable[[Tensor, Tensor], Tensor]:
         """See `tensor_ops.py`"""
-        f = tensor_zip(njit()(fn))
+        f = tensor_zip(njit(fn))
 
         def ret(a: Tensor, b: Tensor) -> Tensor:
             c_shape = shape_broadcast(a.shape, b.shape)
@@ -65,7 +74,7 @@ class FastOps(TensorOps):
         fn: Callable[[float, float], float], start: float = 0.0
     ) -> Callable[[Tensor, int], Tensor]:
         """See `tensor_ops.py`"""
-        f = tensor_reduce(njit()(fn))
+        f = tensor_reduce(njit(fn))
 
         def ret(a: Tensor, dim: int) -> Tensor:
             out_shape = list(a.shape)
@@ -376,5 +385,5 @@ def _tensor_matrix_multiply(
     # END ASSIGN 3.2
 
 
-tensor_matrix_multiply = njit(parallel=True, fastmath=True)(_tensor_matrix_multiply)
+tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
 assert tensor_matrix_multiply is not None
