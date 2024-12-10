@@ -70,3 +70,26 @@ def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
 
 # TODO: Implement for Task 4.3.
 
+class Max(Function):
+    @staticmethod
+    def forward(ctx: Context, inputTensor: Tensor, dim: Tensor) -> Tensor:
+        """Forward pass for max operation"""
+        ctx.save_for_backward(inputTensor, dim)
+        return inputTensor.f.max_reduce(inputTensor, int(dim.item()))
+
+    @staticmethod
+    def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, float]:
+        """Backward pass for max operation"""
+        input, dim = ctx.saved_tensors
+        return grad_output * (argmax(input, dim)), 0.0
+
+
+def argmax(inputTensor: Tensor, dim: int) -> Tensor:
+    """Use argmax to implement one hot encoding"""
+    return inputTensor == max(inputTensor, dim)
+
+def max(inputTensor: Tensor, dim: int) -> Tensor:
+    """Use max to implement argmax"""
+    return Max.apply(inputTensor, inputTensor._ensure_tensor(dim))
+    
+
