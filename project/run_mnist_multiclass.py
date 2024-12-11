@@ -2,6 +2,7 @@ from mnist import MNIST
 
 import minitorch
 
+
 mndata = MNIST("project/data/")
 images, labels = mndata.load_training()
 
@@ -42,7 +43,7 @@ class Conv2d(minitorch.Module):
 
     def forward(self, input):
         # TODO: Implement for Task 4.5.
-        input = minitorch.Conv2d(input, self.weights.value)
+        input = minitorch.conv2d(input, self.weights.value)
         input = input + self.bias.value
         return input
 
@@ -77,9 +78,9 @@ class Network(minitorch.Module):
 
     def forward(self, x):
         # TODO: Implement for Task 4.5.
-        self.mid = self.conv1(x).relu()
+        self.mid = self.conv1.forward(x).relu()
 
-        self.out = self.conv2(self.mid).relu()
+        self.out = self.conv2.forward(self.mid).relu()
 
         out = minitorch.maxpool2d(self.out, (4, 4))
 
@@ -87,13 +88,13 @@ class Network(minitorch.Module):
 
         out = out.view(batch_size, 392)
 
-        out = self.linear1(out).relu()
+        out = self.fc1.forward(out).relu()
 
         out = minitorch.dropout(out, 0.25, ignore = not self.training)
 
-        out = self.linear2(out)
+        out = self.fc2.forward(out)
 
-        return minitorch.log_softmax(out, dim=1)
+        return minitorch.logsoftmax(out, dim=1)
 
         return out
 
